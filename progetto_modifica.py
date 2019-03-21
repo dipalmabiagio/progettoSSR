@@ -10,6 +10,7 @@ import random
 import datetime
 import fileinput
 import socket
+import shutil
 
 #dichiarazione variabili utili
 conf.verb = 0                              #annullo i print di scapy                     
