@@ -292,7 +292,7 @@ def editDNS():
 	
 	websiteUrl = raw_input("insert website to spoof, format example.org:")
 	# Write the file out again
-	with open(ettercap_dns_file_path, 'w') as file:
+	with open(ettercap_dnsfile_path, 'w') as file:
   		file.write('www.'+websiteUrl+'\tA\t'+myIP+'\n')
 		file.write('*.'+websiteUrl+'\tA\t'+myIP+'\n')
 	file.close()
