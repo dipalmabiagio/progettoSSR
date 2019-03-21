@@ -23,7 +23,7 @@ attack_sel = 99				   #numero dell'attacco scelto dall'utente, posto di default 
 router_ip =""
 myIP = ""
 ettercap_file_path= "/etc/ettercap/etter.conf"		#posizione del file etter.conf da modificare
-ettercap_dnsfile_path='etc/ettercap/etter.dns'		#posizione del file etter.dns da modificare
+ettercap_dnsfile_path='/etc/ettercap/etter.dns'		#posizione del file etter.dns da modificare
 ettercao_recovery_path='recovery/etter.dns'
 
 #funzione per scrivere sul content_log i dati sensibili 
