@@ -50,7 +50,7 @@ def iptables_rules():
     os.system("iptables -F -t nat")
     #accettare il jump dei pacchetti dal localhost
     os.system("iptables --append FORWARD --in-interface {} --jump ACCEPT".format(iface))
-    #??
+    #regola per mascherare i pacchetti in uscita dalla lan, modificandone l'origine
     os.system("iptables --table nat --append POSTROUTING --out-interface {} --jump MASQUERADE".format(iface))
 
 #funzione per pulire le regole del firewall 
