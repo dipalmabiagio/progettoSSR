@@ -92,7 +92,7 @@ def selection_attack():
 	attack_list = ["[0] | Stop all the victim's output connections (DOS)",
 	"[1] | DNS Spoof: redirect host on your website, by cheating DNS replies",
 	"[2] | Read navigation history of victim",
-	"[3] | Steal Mail credentials (only on IMAP/POP3/SMTP",
+	"[3] | Steal Mail credentials (only on IMAP/POP3/SMTP)",
 	"[4] | Steal FTP Credentials (only on FTP non-secure)",
 	"[5] | Read Http victim's requests"]
 	for attack in attack_list:
