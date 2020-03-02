@@ -34,12 +34,12 @@ Nel modulo si fa uso del tool nmap per trovare gli host sulla rete, attraverso u
 ### Azioni disponibili
 
 Dopo aver impostato le regole iptables ed aver individuato gli host l'utente sceglie un'azione tra:
-0. Bloccare tutto il traffico in uscita di un utente (DOS)
-1. DNS Spoof : serve a fare un redirect dell'utente falsando le risposte alle richieste DNS dell'utente
-2. Leggere la cronologia dell'utente: anche se si usa SSL le richieste DNS sono inviate in chiaro, viene generato un documento con tutte le richieste inoltrate.
-3. Rubare le credenziali mail su tutti i protocolli, a condizione che non si faccia uso di SSL
-4. Rubare le credenziali FTP (funziona solo in assenza di FTP con SSL)
-5. Analizzare le richieste HTTP della vittima
+1. Bloccare tutto il traffico in uscita di un utente (DOS)
+2. DNS Spoof : serve a fare un redirect dell'utente falsando le risposte alle richieste DNS dell'utente
+3. Leggere la cronologia dell'utente: anche se si usa SSL le richieste DNS sono inviate in chiaro, viene generato un documento con tutte le richieste inoltrate.
+4. Rubare le credenziali mail su tutti i protocolli, a condizione che non si faccia uso di SSL
+5. Rubare le credenziali FTP (funziona solo in assenza di FTP con SSL)
+6. Analizzare le richieste HTTP della vittima
 
 
 # Contributors
