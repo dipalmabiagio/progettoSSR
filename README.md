@@ -7,25 +7,25 @@ Questo progetto è stato sviluppato in un contesto accademico, durante la prepar
 Il progetto consiste nello sviluppo di un piccolo tool che al suo interno contiene diverse funzionalità per condurre diversi attacchi tramite una rete WiFi.
 
 ### IpTables
-Nel modulo si fa uso di iptables per impostare delle regole sul firewall dell'host locale, in particolare vi sono due funzioni a riguardo:
+Nel modulo si fa uso di iptables per impostare delle regole sul firewall dell'host locale, in particolare vi sono due funzioni a riguardo:    
 * iptables_rules: questa funzione serve ad impostare l'host locale come gatweway per i pacchetti della rete, in modo tale che tutto il traffico sia sotto controllo (fa uso di _arp poisoning_).
-    
-    def iptables_rules():
-    os.system("iptables --flush")
-    os.system("iptables --zero")
-    os.system("iptables --delete-chain")
-    #flush della tabella di natting
-    os.system("iptables -F -t nat")
-    #accettare il jump dei pacchetti dal localhost
-    os.system("iptables --append FORWARD --in-interface {} --jump ACCEPT".format(iface))
-    #regola per mascherare i pacchetti in uscita dalla lan, modificandone l'origine
-    os.system("iptables --table nat --append POSTROUTING --out-interface {} --jump MASQUERADE".format(iface))
+
+        def iptables_rules():
+        os.system("iptables --flush")
+        os.system("iptables --zero")
+        os.system("iptables --delete-chain")
+        #flush della tabella di natting
+        os.system("iptables -F -t nat")
+        #accettare il jump dei pacchetti dal localhost
+        os.system("iptables --append FORWARD --in-interface {} --jump ACCEPT".format(iface))
+        #regola per mascherare i pacchetti in uscita dalla lan, modificandone l'origine
+        os.system("iptables --table nat --append POSTROUTING --out-interface {} --jump MASQUERADE".format(iface))
     
 * iptables_clean: questo metodo serve solo quando si smette di usare il tool per eliminare le regole impostate con la funzione precedente.
 
-    #funzione per pulire le regole del firewall 
-    def iptables_clean():                      
-    os.system("iptables --flush")	
+        #funzione per pulire le regole del firewall 
+        def iptables_clean():                      
+        os.system("iptables --flush")	
    
 ### nmap
 
