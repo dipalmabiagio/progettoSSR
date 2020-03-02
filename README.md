@@ -61,5 +61,5 @@ Le librerie utili per eseguire lo script sono:
 # Contributors
 
 * [Biagio Dipalma](https://www.linkedin.com/in/biagio-dipalma/) - Università degli Studi di Milano | La Statale. CDL Magistrale in Sicurezza Informatica.
-* [Nicola Di Monte] (https://www.linkedin.com/in/nicola-di-monte-050bb8199/) - Università degli Studi di Milano | La Statale. CDL Magistrale in Sicurezza Informatica.
+* [Nicola Di Monte](https://www.linkedin.com/in/nicola-di-monte-050bb8199/) - Università degli Studi di Milano | La Statale. CDL Magistrale in Sicurezza Informatica.
 
