@@ -41,6 +41,22 @@ Dopo aver impostato le regole iptables ed aver individuato gli host l'utente sce
 5. Rubare le credenziali FTP (funziona solo in assenza di FTP con SSL)
 6. Analizzare le richieste HTTP della vittima
 
+## Librerie utili
+
+Le librerie utili per eseguire lo script sono:
+* scapy
+* subprocess
+* netaddr
+* os
+* threading
+* time
+* string
+* random
+* datetime
+* fileinput
+* socket
+* shutil
+
 
 # Contributors
 
